@@ -5,7 +5,9 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   selector: 'app-custom-option',
   standalone: true,
   imports: [CommonModule],
-  template: `<p>custom-option works!</p>`,
+  template: ` <div class="option-content">
+    <ng-content />
+  </div>`,
   styleUrl: './custom-option.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
