@@ -50,7 +50,18 @@ export class CustomOptionComponent<T> {
 
   protected isSelected = signal<boolean>(false);
   @HostBinding('class.selected')
+  /**
+   * Returns true if the option is currently selected, false otherwise.
+   *
+
+  @HostBinding('class.selected')
+  protected isSelected = signal<boolean>(false);
+
+  this way it will always return signal object which eventuly true 
+   * @return {boolean} True if the option is selected, false otherwise.
+   */
   get selectedClass() {
+    // Return the value of the isSelected signal.
     return this.isSelected();
   }
 
