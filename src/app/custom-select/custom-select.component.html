@@ -1,0 +1,35 @@
+<div class="label">
+  {{ label() }}
+</div>
+
+<div
+  class="control"
+  cdkOverlayOrigin
+  #origin="cdkOverlayOrigin"
+  (click)="toggleOpen()"
+>
+  <span class="selected-value" [ngClass]="{ empty: !value() }">
+    {{ value() || "nothing selected......" }}
+  </span>
+  <span>👇</span>
+</div>
+
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="origin"
+  [cdkConnectedOverlayOpen]="isOpen()"
+  offsetX="-11"
+  offsetY="20"
+  cdkConnectedOverlayHasBackdrop
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  (detach)="close()"
+  (backdropClick)="close()"
+>
+  <div
+    class="panel"
+    [@dropDown]
+    (@dropDown.done)="onPanelAnimationDone($event)"
+  >
+    Clear
+  </div>
+</ng-template>
