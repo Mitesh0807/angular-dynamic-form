@@ -1,7 +1,9 @@
 <div>
   <app-custom-select label="Select city">
     <h3>Available city</h3>
-    <app-custom-option>Delhi</app-custom-option>
+    <app-custom-option [disabled]="true" disabledReason="not allowed"
+      >Delhi</app-custom-option
+    >
     <app-custom-option>Mumbai</app-custom-option>
     <app-custom-option>Chennai</app-custom-option>
   </app-custom-select>
