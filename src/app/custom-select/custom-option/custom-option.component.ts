@@ -34,8 +34,11 @@ export class CustomOptionComponent<T> {
   disabledReason = input<string>('Selection is Disabled');
   private el = inject(ElementRef<HTMLElement>);
 
-  @HostBinding('class.disabled')
   disabled = input<boolean>(false);
+  @HostBinding('class.disabled')
+  get disabledClass() {
+    return this.disabled();
+  }
 
   @HostListener('click')
   protected select() {
@@ -45,12 +48,17 @@ export class CustomOptionComponent<T> {
     }
   }
 
-  @HostBinding('class.selected')
   protected isSelected = signal<boolean>(false);
+  @HostBinding('class.selected')
+  get selectedClass() {
+    return this.isSelected();
+  }
 
-  @HostBinding('class.active')
   protected isActive = signal<boolean>(false);
-
+  @HostBinding('class.active')
+  get activeClass() {
+    return this.isActive();
+  }
   highlightAsSelected() {
     this.isSelected.set(true);
   }
