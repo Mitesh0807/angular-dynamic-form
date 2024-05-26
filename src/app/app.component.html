@@ -1,8 +1,17 @@
 <div>
-  <app-custom-select label="Select city" value="delhi">
-    <h3>Available city</h3>
-    <app-custom-option value="delhi">Delhi</app-custom-option>
-    <app-custom-option value="Mumbai">Mumbai</app-custom-option>
-    <app-custom-option value="Chennai">Chennai</app-custom-option>
+  <app-custom-select
+    label="Select city"
+    label="Pick the User"
+    multiple
+    [searchable]="true"
+    [compareWith]="compareWithFn"
+    [displayWith]="displayWithFn"
+    [formControl]="selectValue"
+    (closed)="onSearchChanged('')"
+    (searchChanged)="onSearchChanged($event)"
+  >
+    @for(item of filteredUsers; track item.id){
+    <app-custom-option [value]="item">{{ item.name }}</app-custom-option>
+    }
   </app-custom-select>
 </div>

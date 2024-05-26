@@ -1,29 +1,40 @@
-<div class="label">
-  {{ label() }}
+<div class="label">{{ label }}</div>
+<div class="control" cdkOverlayOrigin #origin="cdkOverlayOrigin">
+  <ng-container [ngSwitch]="searchable && _isOpen()">
+    <input
+      #input
+      *ngSwitchCase="true"
+      (input)="onHandleInput($event)"
+      class="select-search"
+      placeholder="Start typing..."
+    />
+    <span
+      *ngSwitchCase="false"
+      class="selected-value"
+      [ngClass]="{ empty: !_value() }"
+    >
+      {{ displayValue || "Nothing is selected..." }}
+    </span>
+  </ng-container>
+  <button
+    (click)="clearSelection($event)"
+    *ngIf="_value()"
+    class="clear-button"
+  >
+    clear
+  </button>
+  <span class="drop-down-icon">👇</span>
 </div>
-
-<div
-  class="control"
-  cdkOverlayOrigin
-  #origin="cdkOverlayOrigin"
-  (click)="toggleOpen()"
->
-  <span class="selected-value" [ngClass]="{ empty: !_value() }">
-    {{ _value() || "nothing selected......" }}
-  </span>
-  <span>👇</span>
-</div>
-
 <ng-template
   cdkConnectedOverlay
   [cdkConnectedOverlayOrigin]="origin"
-  [cdkConnectedOverlayOpen]="isOpen()"
-  offsetX="-11"
-  offsetY="20"
+  [cdkConnectedOverlayOpen]="_isOpen()"
+  [cdkConnectedOverlayOffsetY]="8"
+  [cdkConnectedOverlayOffsetX]="-11"
   cdkConnectedOverlayHasBackdrop
   cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
-  (detach)="close()"
   (backdropClick)="close()"
+  (detach)="close()"
 >
   <div
     class="panel"
