@@ -29,7 +29,7 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CustomOptionComponent<T> {
-  value = input<T | null>(null);
+  value = input.required<T>();
   selected = output<CustomOptionComponent<T>>();
   disabledReason = input<string>('Selection is Disabled');
   private el = inject(ElementRef<HTMLElement>);
@@ -61,7 +61,6 @@ export class CustomOptionComponent<T> {
    * @return {boolean} True if the option is selected, false otherwise.
    */
   get selectedClass() {
-    // Return the value of the isSelected signal.
     return this.isSelected();
   }
 

@@ -8,8 +8,8 @@
   #origin="cdkOverlayOrigin"
   (click)="toggleOpen()"
 >
-  <span class="selected-value" [ngClass]="{ empty: !value() }">
-    {{ value() || "nothing selected......" }}
+  <span class="selected-value" [ngClass]="{ empty: !_value() }">
+    {{ _value() || "nothing selected......" }}
   </span>
   <span>👇</span>
 </div>

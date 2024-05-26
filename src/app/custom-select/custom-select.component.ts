@@ -3,11 +3,17 @@ import {
   Component,
   HostListener,
   output,
-  ViewChild,
   input,
   signal,
-  ContentChildren,
-  QueryList,
+  viewChild,
+  contentChildren,
+  Input,
+  OnChanges,
+  AfterContentInit,
+  OnDestroy,
+  SimpleChanges,
+  HostBinding,
+  effect,
 } from '@angular/core';
 import { OverlayModule, CdkOverlayOrigin } from '@angular/cdk/overlay';
 import {
@@ -19,7 +25,11 @@ import {
   AnimationEvent,
 } from '@angular/animations';
 import { CustomOptionComponent } from './custom-option/custom-option.component';
+import { SelectionModel } from '@angular/cdk/collections';
+import { coerceBooleanProperty } from '@angular/cdk/coercion';
+import { ControlValueAccessor } from '@angular/forms';
 
+export type SelectValue<T> = T | T[] | null;
 @Component({
   selector: 'app-custom-select',
   standalone: true,
@@ -37,17 +47,71 @@ import { CustomOptionComponent } from './custom-option/custom-option.component';
     ]),
   ],
 })
-export class CustomSelectComponent<T> {
+export class CustomSelectComponent<T>
+  implements OnChanges, AfterContentInit, OnDestroy, ControlValueAccessor
+{
+  constructor() {
+    effect(() => {
+      const optionsChanged = this.options();
+      console.log(optionsChanged, 'effect');
+      this.refreshOptionsMap();
+      this.highlightSelectedOptions();
+    });
+  }
+  //Control value accessor impl
+  writeValue(obj: any): void {
+    // throw new Error('Method not implemented.');
+  }
+  registerOnChange(fn: any): void {
+    // throw new Error('Method not implemented.');
+  }
+  registerOnTouched(fn: any): void {
+    // throw new Error('Method not implemented.');
+  }
+  setDisabledState?(isDisabled: boolean): void {
+    // throw new Error('Method not implemented.');
+  }
+  ngOnDestroy(): void {
+    //memory cleanup
+  }
+  ngOnChanges(changes: SimpleChanges): void {
+    console.log(changes, 'changes');
+  }
   label = input<string>('');
-  value = input<string | null>('');
   isOpen = signal(false);
+  _value = signal<T>(null as T);
+  multiple = input<boolean>(false);
+  optionMap = new Map<T | null, CustomOptionComponent<T>>();
+
+  disabled = signal<boolean>(false);
+  @HostBinding('class.disabled')
+  get disabledClass() {
+    return this.disabled();
+  }
+
+  protected onChange: (newValue: SelectValue<T>) => void = () => {};
+
+  @Input({ required: true })
+  get value() {
+    return this._value();
+  }
+  set value(value: T) {
+    console.log(value, 'value');
+    this.setupValue(value);
+    this.onChange(this._value());
+    this.highlightSelectedOptions();
+  }
+
+  private selectionModel = new SelectionModel<T>(
+    coerceBooleanProperty(this.multiple())
+  );
 
   readonly opened = output();
   readonly selectionChanged = output();
   readonly closed = output();
   readonly searchChanged = output<string>();
 
-  @ViewChild(CdkOverlayOrigin) origin!: CdkOverlayOrigin;
+  origin = viewChild<CdkOverlayOrigin>(CdkOverlayOrigin);
 
   @HostListener('click')
   toggleOpen() {
@@ -57,13 +121,13 @@ export class CustomSelectComponent<T> {
     this.isOpen.set(false);
   }
 
-  @ContentChildren(CustomOptionComponent, {
+  options = contentChildren<CustomOptionComponent<T>>(CustomOptionComponent, {
     descendants: true,
-  })
-  options!: QueryList<CustomOptionComponent<T>>;
+  });
 
   ngAfterContentInit() {
-    this.highlightSelectedOptions(this.value());
+    console.log(this.options(), 'after content init');
+    this.options();
   }
 
   onPanelAnimationDone({ fromState, toState }: AnimationEvent) {
@@ -75,14 +139,35 @@ export class CustomSelectComponent<T> {
     }
   }
 
-  private highlightSelectedOptions(value: string | null) {
-    const option = this.findOptionsByValue(value);
-    if (option) {
-      option.highlightAsSelected();
+  private refreshOptionsMap() {
+    this.optionMap.clear();
+    this.options()?.forEach((o) => this.optionMap.set(o.value(), o));
+  }
+
+  private setupValue(value: T) {
+    this.selectionModel.clear();
+    if (value) {
+      if (Array.isArray(value)) {
+        this.selectionModel.select(...value);
+      } else {
+        this.selectionModel.select(value);
+      }
     }
   }
 
-  private findOptionsByValue(value: string | null) {
-    return this.options && this.options.find((o) => o.value() === value);
+  private highlightSelectedOptions() {
+    const valueWithUpdatedReferences = this.selectionModel.selected.map(
+      (value) => {
+        console.log(value, 'aaaa');
+        const correspondingOption = this.findOptionsByValue(value);
+        console.log(correspondingOption, 'a');
+        return correspondingOption ? correspondingOption.value() : value;
+      }
+    );
+  }
+
+  private findOptionsByValue(value: T) {
+    console.log(this.options(), 'adww');
+    return this.options && this.options().find((o) => o.value() === value);
   }
 }
