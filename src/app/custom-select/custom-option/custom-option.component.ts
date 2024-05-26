@@ -10,11 +10,12 @@ import {
   output,
   signal,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-custom-option',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="option-content">
       <ng-content />
@@ -48,7 +49,7 @@ export class CustomOptionComponent<T> {
     }
   }
 
-  protected isSelected = signal<boolean>(false);
+  isSelected = signal<boolean>(false);
   @HostBinding('class.selected')
   /**
    * Returns true if the option is currently selected, false otherwise.

@@ -29,8 +29,16 @@ import {
   computed,
   effect,
   viewChild,
+  input,
+  model,
+  contentChildren,
 } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import {
+  ControlValueAccessor,
+  FormsModule,
+  NG_VALUE_ACCESSOR,
+  ReactiveFormsModule,
+} from '@angular/forms';
 import { ActiveDescendantKeyManager, Highlightable } from '@angular/cdk/a11y';
 import { CustomOptionComponent } from './custom-option/custom-option.component';
 import { OverlayModule } from '@angular/cdk/overlay';
@@ -43,7 +51,13 @@ export type SelectValue<T> = T | T[] | null;
   templateUrl: './custom-select.component.html',
   styleUrls: ['./custom-select.component.scss'],
   standalone: true,
-  imports: [NgClass, OverlayModule, CommonModule],
+  imports: [
+    CommonModule,
+    NgClass,
+    OverlayModule,
+    ReactiveFormsModule,
+    FormsModule,
+  ],
   animations: [
     trigger('dropDown', [
       state('void', style({ transform: 'scaleY(0)', opacity: 0 })),
@@ -66,15 +80,15 @@ export type SelectValue<T> = T | T[] | null;
 export class CustomSelectComponent<T>
   implements OnChanges, AfterContentInit, OnDestroy, ControlValueAccessor
 {
-  @Input()
-  label = '';
+  label = input<string>('');
 
-  @Input()
-  searchable = false;
+  searchable = input<boolean>(false);
 
-  @Input()
+  disabled = model<boolean>(false);
   @HostBinding('class.disabled')
-  disabled = false;
+  get disabledClass() {
+    return this.disabled();
+  }
 
   @Input()
   displayWith: ((value: T) => string | number) | null = null;
@@ -84,12 +98,10 @@ export class CustomSelectComponent<T>
 
   private multiple: boolean;
 
-  _value = signal<SelectValue<T>>(null);
-  private _options = signal<
-    QueryList<Highlightable & CustomOptionComponent<T>>
-  >(null!);
+  value = model<SelectValue<T>>(null);
+
   _isOpen = signal(false);
-  private _searchText = signal('');
+  searchText = signal('');
 
   @Output()
   readonly opened = new EventEmitter<void>();
@@ -103,10 +115,14 @@ export class CustomSelectComponent<T>
   @Output()
   readonly searchChanged = new EventEmitter<string>();
 
-  @ContentChildren(CustomOptionComponent, { descendants: true })
-  set options(value: QueryList<Highlightable & CustomOptionComponent<T>>) {
-    this._options.set(value);
-  }
+  // @ContentChildren(CustomOptionComponent, { descendants: true })
+  // set options(value: QueryList<Highlightable & CustomOptionComponent<T>>) {
+  //   this._options.set(value);
+  // }
+
+  options = contentChildren<CustomOptionComponent<T>>(CustomOptionComponent, {
+    descendants: true,
+  });
 
   // @ViewChild('input')
   // searchInputEl!: ElementRef<HTMLInputElement>;
@@ -122,14 +138,15 @@ export class CustomSelectComponent<T>
 
   private optionMap = new Map<T | null, CustomOptionComponent<T>>();
 
-  private listKeyManager!: ActiveDescendantKeyManager<CustomOptionComponent<T>>;
-
+  // private listKeyManager!: ActiveDescendantKeyManager<Readonly<CustomOptionComponent<T>>>;
   protected get displayValue() {
-    if (this.displayWith && this._value()) {
-      return this.displayWith(this._value()?.toString() as T);
+    const currentValue = this.value();
+    if (this.displayWith && currentValue) {
+      if (Array.isArray(currentValue)) {
+        return currentValue.map(this.displayWith);
+      }
     }
-
-    return this._value();
+    return this.value();
   }
 
   constructor(
@@ -140,12 +157,15 @@ export class CustomSelectComponent<T>
     this.multiple = coerceBooleanProperty(multiple);
 
     effect(() => {
-      this.setupValue(this._value());
-      this.highlightSelectedOptions();
+      this.options().forEach((o) => {
+        console.log(o.isSelected());
+
+        this.handleSelection(o);
+        //this.handleSelection;
+      });
     });
 
     effect(() => {
-      this.refreshOptionsMap();
       this.highlightSelectedOptions();
     });
   }
@@ -160,9 +180,9 @@ export class CustomSelectComponent<T>
 
   @HostListener('click')
   open() {
-    if (this.disabled) return;
+    if (this.disabled()) return;
     this._isOpen.set(true);
-    if (this.searchable) {
+    if (this.searchable()) {
       setTimeout(() => {
         this.searchInputEl().nativeElement.focus();
       }, 0);
@@ -177,23 +197,23 @@ export class CustomSelectComponent<T>
     this.cd.markForCheck();
   }
 
-  @HostListener('keydown', ['$event'])
-  protected onKeyDown(e: KeyboardEvent) {
-    if (e.key === 'ArrowDown' && !this._isOpen()) {
-      this.open();
-      return;
-    }
-    if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && this._isOpen()) {
-      this.listKeyManager.onKeydown(e);
-      return;
-    }
-    if (e.key === 'Enter' && this._isOpen() && this.listKeyManager.activeItem) {
-      this.handleSelection(this.listKeyManager.activeItem);
-    }
-  }
+  // @HostListener('keydown', ['$event'])
+  // protected onKeyDown(e: KeyboardEvent) {
+  //   if (e.key === 'ArrowDown' && !this._isOpen()) {
+  //     this.open();
+  //     return;
+  //   }
+  //   if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && this._isOpen()) {
+  //     this.listKeyManager.onKeydown(e);
+  //     return;
+  //   }
+  //   if (e.key === 'Enter' && this._isOpen() && this.listKeyManager.activeItem) {
+  //     this.handleSelection(this.listKeyManager.activeItem);
+  //   }
+  // }
 
   writeValue(value: SelectValue<T>): void {
-    this._value.set(value);
+    this.value.set(value);
   }
   registerOnChange(fn: any): void {
     this.onChange = fn;
@@ -202,8 +222,8 @@ export class CustomSelectComponent<T>
     this.onTouched = fn;
   }
   setDisabledState?(isDisabled: boolean): void {
-    this.disabled = isDisabled;
-    this.cd.markForCheck();
+    this.disabled.set(isDisabled);
+    // this.cd.markForCheck();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -213,30 +233,32 @@ export class CustomSelectComponent<T>
   }
 
   ngAfterContentInit(): void {
-    this.listKeyManager = new ActiveDescendantKeyManager(
-      this._options().toArray()
-    ).withWrap();
-    this.listKeyManager.change.subscribe((itemIndex) => {
-      this._options().get(itemIndex)?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
+    effect(() => {
+      this.options().forEach((o) => {
+        console.log(o);
+        //this.handleSelection;
       });
     });
-
-    this._options().changes.subscribe(() => {
-      this.refreshOptionsMap();
-      this.highlightSelectedOptions();
-    });
+    // this.listKeyManager = new ActiveDescendantKeyManager(
+    //   this.options()
+    // ).withWrap();
+    // this.listKeyManager.change.subscribe((itemIndex) => {
+    //   this.options().find(itemIndex)
+    //   this.options().get(itemIndex)?.scrollIntoView({
+    //     behavior: 'smooth',
+    //     block: 'center',
+    //   });
+    // });
   }
 
   ngOnDestroy(): void {}
 
   clearSelection(e?: Event) {
     e?.stopPropagation();
-    if (this.disabled) return;
-    this._value.set(null);
-    this.selectionChanged.emit(this._value());
-    this.onChange(this._value());
+    if (this.disabled()) return;
+    this.value.set(null);
+    this.selectionChanged.emit(this.value());
+    this.onChange(this.value());
     this.cd.markForCheck();
   }
 
@@ -249,68 +271,64 @@ export class CustomSelectComponent<T>
     }
   }
 
-  protected onHandleInput(e: Event) {
-    this._searchText.set((e.target as HTMLInputElement).value);
-    this.searchChanged.emit(this._searchText());
+  protected onHandleInput(e: string) {
+    this.searchText.set(e);
+    this.searchChanged.emit(this.searchText());
   }
 
   private setupValue(value: SelectValue<T>) {
     if (value && !Array.isArray(value) && this.multiple) {
       value = [value];
     }
-    this._value.set(value);
+    this.value.set(value);
   }
 
   private handleSelection(option: CustomOptionComponent<T>) {
-    if (this.disabled) return;
+    if (this.disabled()) return;
     const value = option.value();
 
     if (this.multiple) {
-      const currentValue = (this._value() as T[]) || [];
-      if (currentValue.includes(value)) {
-        this._value.set(currentValue.filter((v) => v !== value));
+      const currentValue = this.value() as T[];
+      if (currentValue && currentValue.includes(value)) {
+        this.value.set(currentValue.filter((v) => v !== value));
       } else {
-        this._value.set([...currentValue, value]);
+        this.value.set([...currentValue, value]);
       }
     } else {
-      this._value.set(value);
+      this.value.set(value);
     }
 
-    this.selectionChanged.emit(this._value());
-    this.onChange(this._value());
+    this.selectionChanged.emit(this.value());
+    this.onChange(this.value());
 
     if (!this.multiple) {
       this.close();
     }
   }
 
-  private refreshOptionsMap() {
-    this.optionMap.clear();
-    this._options().forEach((o) => this.optionMap.set(o.value(), o));
-  }
-
   private highlightSelectedOptions() {
-    const value = this._value();
+    const value = this.value();
     if (!value) return;
-
     const valuesWithUpdatedReferences = (
       Array.isArray(value) ? value : [value]
     ).map((val) => {
       const correspondingOption = this.findOptionsByValue(val);
-      return correspondingOption ? correspondingOption.value! : val;
+      return correspondingOption ? correspondingOption.value() : val;
     });
 
     if (this.multiple) {
-      this._value.set(valuesWithUpdatedReferences as SelectValue<T>);
+      this.value.set(valuesWithUpdatedReferences);
     } else {
-      this._value.set(valuesWithUpdatedReferences[0] as SelectValue<T>);
+      this.value.set(valuesWithUpdatedReferences[0]);
     }
   }
 
   private findOptionsByValue(value: T | null) {
-    if (this.optionMap.has(value)) {
-      return this.optionMap.get(value);
+    const val = this.options().find((op) => op.value() === value);
+    if (val) {
+      console.log('00');
+      return val;
     }
-    return this._options().find((o) => this.compareWith(o.value(), value));
+    return this.options().find((o) => this.compareWith(o.value(), value));
   }
 }
